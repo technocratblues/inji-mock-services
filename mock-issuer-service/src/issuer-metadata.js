@@ -23,11 +23,11 @@ const BASE_CREDENTIAL_CONFIGURATIONS = {
     credential_metadata: {
       display: [
         { name: "Farmer Credential", locale: "en" ,logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         }},
         { name: "किसान क्रेडेंशियल", locale: "hi",logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         } },
       ],
@@ -102,27 +102,27 @@ const BASE_CREDENTIAL_CONFIGURATIONS = {
     credential_metadata: {
       display: [
         { name: "Employee Credential", locale: "en",logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         } },
         { name: "Kredensyal ng Empleyado", locale: "fil" ,logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         }},
         { name: "कर्मचारी क्रेडेंशियल", locale: "hi" ,logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         }},
         { name: "ಉದ್ಯೋಗಿ ರುಜುವಾತು", locale: "kn",logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         } },
         { name: "பணியாளர் நற்சான்றிதழ்", locale: "ta" ,logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         }},
         { name: "اعتماد الموظف", locale: "ar",logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         } },
       ],
@@ -190,7 +190,7 @@ const BASE_CREDENTIAL_CONFIGURATIONS = {
     credential_metadata: {
       display: [
         { name: "SD-JWT Employee Credential", locale: "en",logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         } },
       ],
@@ -215,7 +215,7 @@ const BASE_CREDENTIAL_CONFIGURATIONS = {
     credential_metadata: {
       display: [
         { name: "Mobile Driving License", locale: "en" ,logo: {
-          url: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
+          uri: "https://inji.github.io/inji-config/logos/mosipid-logo.png",
           alt_text: "a square logo of a MOSIP"
         }},
       ],
