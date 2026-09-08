@@ -14,6 +14,22 @@ const LDP_SIGNATURE_SUITE = (process.env.LDP_SIGNATURE_SUITE || 'ed25519').toLow
 // the /.well-known/did.json endpoint can serve the matching public key)
 let _rsaKeyCache = null;
 
+let _ed25519KeyCache = null;
+
+async function getEd25519Key(issuerDid) {
+  if (_ed25519KeyCache &&
+      _ed25519KeyCache.controller === issuerDid) {
+    return _ed25519KeyCache;
+  }
+
+  _ed25519KeyCache = await Ed25519VerificationKey2018.generate({
+    id: `${issuerDid}#key-0`,
+    controller: issuerDid
+  });
+
+  return _ed25519KeyCache;
+}
+
 function getRsaKey(issuerDid) {
   if (_rsaKeyCache && _rsaKeyCache.controller === issuerDid) {
     return _rsaKeyCache;
@@ -28,13 +44,13 @@ function getRsaKey(issuerDid) {
   const publicKeyObj = crypto.createPublicKey(publicKey);
   const publicKeyJwk = publicKeyObj.export({ format: 'jwk' });
 
-  _rsaKeyCache = {
-    id: `${issuerDid}#key-0`,
-    controller: issuerDid,
-    privateKeyPem: privateKey,
-    publicKeyJwk,
-  };
-
+ _rsaKeyCache = {
+  id: `${issuerDid}#key-0`,
+  controller: issuerDid,
+  privateKeyPem: privateKey,
+  publicKeyPem: publicKey,
+  publicKeyJwk,
+};
   return _rsaKeyCache;
 }
 
@@ -42,8 +58,32 @@ function getRsaKey(issuerDid) {
  * Returns the DID Document for the current RSA key.
  * Used by the /.well-known/did.json Express route.
  */
-export function getDidDocument(issuerDid) {
+export async function getDidDocument(issuerDid) {
+
+  if (LDP_SIGNATURE_SUITE === "ed25519") {
+
+    const key = await getEd25519Key(issuerDid);
+
+    return {
+      "@context": [
+        "https://www.w3.org/ns/did/v1",
+        "https://w3id.org/security/v2"
+      ],
+      id: issuerDid,
+      verificationMethod: [{
+        id: key.id,
+        type: "Ed25519VerificationKey2018",
+        controller: issuerDid,
+        publicKeyBase58: key.publicKeyBase58
+      }],
+      assertionMethod: [key.id],
+      authentication: [key.id]
+    };
+  }
+
+  // Existing RSA code
   const key = getRsaKey(issuerDid);
+
   return {
     "@context": [
       "https://www.w3.org/ns/did/v1",
@@ -52,9 +92,10 @@ export function getDidDocument(issuerDid) {
     id: issuerDid,
     verificationMethod: [{
       id: key.id,
-      type: 'RsaVerificationKey2018',
+      type: "RsaVerificationKey2018",
       controller: issuerDid,
       publicKeyJwk: key.publicKeyJwk,
+      publicKeyPem: key.publicKeyPem,
     }],
     assertionMethod: [key.id],
     authentication: [key.id],
@@ -68,14 +109,18 @@ export function getDidDocument(issuerDid) {
 class RsaSignature2018 extends LinkedDataSignature {
   constructor({ key, date } = {}) {
     const signer = {
-      id: key.id,
-      sign: async ({ data }) => {
-        return crypto.sign('sha256', data, key.privateKeyPem);
-      }
-    };
+  id: key.id,
+  sign: async ({ data }) => {
+    return crypto.sign('sha256', data, {
+      key: key.privateKeyPem,
+      padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+      saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
+    });
+  }
+};
     super({
       type: 'RsaSignature2018',
-      algorithm: 'RS256',
+      algorithm: 'PS256',
       date,
       signer,
       // credentials/v1 already defines RsaSignature2018; point contextUrl there
@@ -86,18 +131,25 @@ class RsaSignature2018 extends LinkedDataSignature {
   }
 
   async sign({ verifyData, proof }) {
-    const header = Buffer.from(
-      JSON.stringify({ alg: 'RS256', b64: false, crit: ['b64'] })
-    ).toString('base64url');
-    // JWS signing input: ASCII(header) + "." + raw payload bytes
-    const signingInput = Buffer.concat([
-      Buffer.from(header + '.', 'ascii'),
-      verifyData
-    ]);
-    const signature = crypto.sign('sha256', signingInput, this.rsaKey.privateKeyPem);
-    proof.jws = `${header}..${signature.toString('base64url')}`;
-    return proof;
-  }
+  const header = Buffer.from(
+    JSON.stringify({ alg: 'PS256' })
+  ).toString('base64url');
+  const signingInput = Buffer.concat([
+    Buffer.from(header + '.', 'ascii'),
+    verifyData
+  ]);
+  const signature = crypto.sign(
+    'sha256',
+    signingInput,
+    {
+      key: this.rsaKey.privateKeyPem,
+      padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+      saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
+    }
+  );
+  proof.jws = `${header}..${signature.toString('base64url')}`;
+  return proof;
+}
 
   async getVerificationMethod() {
     return {
@@ -108,16 +160,18 @@ class RsaSignature2018 extends LinkedDataSignature {
     };
   }
 
-  async canonizeProof(proof, { document, documentLoader }) {
-    proof = {
-      '@context': 'https://w3id.org/security/v2',
-      ...proof
-    };
-    delete proof.jws;
-    delete proof.signatureValue;
-    delete proof.proofValue;
-    return this.canonize(proof, { documentLoader, skipExpansion: false });
-  }
+async canonizeProof(proof, {document, documentLoader}) {
+  proof = {
+    '@context': 'https://w3id.org/security/v2',
+    ...proof
+  };
+
+  delete proof.jws;
+  delete proof.signatureValue;
+  delete proof.proofValue;
+
+  return this.canonize(proof, {documentLoader, skipExpansion: false});
+}
 
   async canonize(input, { documentLoader, skipExpansion }) {
     const jsonld = (await import('jsonld')).default;
@@ -134,10 +188,11 @@ class RsaSignature2018 extends LinkedDataSignature {
     };
     delete opts.format;
     const dataset = await jsonld.toRDF(input, opts);
-    return rdfCanonize.canonize(dataset, {
-      algorithm: 'RDFC-1.0',
-      format: 'application/n-quads',
-    });
+   const canonized = await rdfCanonize.canonize(dataset, {
+  algorithm: 'RDFC-1.0',
+  format: 'application/n-quads',
+});
+return canonized;
   }
 
   async assertVerificationMethod({ verificationMethod }) {
@@ -273,19 +328,16 @@ const CONTEXTS = {
 
 export const documentLoader = async (url) => {
   const context = CONTEXTS[url];
+
   if (context) {
     return {
       contextUrl: null,
       documentUrl: url,
-      document: context
+      document: context,
     };
   }
-  // Fallback to a mock for any other URL to avoid validation errors in some suites
-  return {
-    contextUrl: null,
-    documentUrl: url,
-    document: { "@context": {} }
-  };
+
+  throw new Error(`Unknown context requested: ${url}`);
 };
 
 async function signWithRsa(credential, issuerDid) {
@@ -306,12 +358,22 @@ async function signWithRsa(credential, issuerDid) {
 }
 
 async function signWithEd25519(credential, issuerDid) {
-  const key = await Ed25519VerificationKey2018.generate({
-    id: `${issuerDid}#key-0`,
-    controller: issuerDid
-  });
+ const key = await getEd25519Key(issuerDid);
 
-  const suite = new Ed25519Signature2018({
+  class FixedEd25519Signature2018 extends Ed25519Signature2018 {
+    async canonizeProof(proof, { document, documentLoader }) {
+      proof = {
+        '@context': 'https://w3id.org/security/v2',
+        ...proof,
+      };
+      delete proof.jws;
+      delete proof.signatureValue;
+      delete proof.proofValue;
+      return this.canonize(proof, { documentLoader, skipExpansion: false });
+    }
+  }
+
+  const suite = new FixedEd25519Signature2018({   
     key,
     date: new Date().toISOString()
   });
@@ -324,10 +386,10 @@ async function signWithEd25519(credential, issuerDid) {
 
   return signedVc;
 }
-
 export async function signLdpVc(credential, issuerDid) {
-  if (LDP_SIGNATURE_SUITE === 'rsa') {
+  if (LDP_SIGNATURE_SUITE === "rsa") {
     return signWithRsa(credential, issuerDid);
   }
+
   return signWithEd25519(credential, issuerDid);
 }
