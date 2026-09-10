@@ -27,7 +27,6 @@ export const STATIC_LDP_VC = {
 
 export const STATIC_JWT_VC = {
   "iss": "did:jwk:eyJrdHkiOiJFQyIsImNydiI6IlAtMjU2Iiwia2lkIjoiMSIsIngiOiI0eE9mS3pXNl96S018M04xOVM1eE1hVldreDVSR3A1YURSVmJXcHBiRzF1VG5reFYiLCJ5IjoiaVpXVk5qWmxWdlZWVmJlRWRxV0hWemVIaFNVVkpYVzFsd01XMXdjM0J2YlZSIn0",
-  "sub": "did:example:holder456",
   "jti": "urn:uuid:3c67f42e-dd3c-4d9b-898a-debff416ccca",
   "iat": 1767225600,
   "nbf": 1767225600,
@@ -38,7 +37,6 @@ export const STATIC_JWT_VC = {
     ],
     "type": ["VerifiableCredential", "EmployeeCredential"],
     "credentialSubject": {
-      "id": "did:example:holder456",
       "employeeId": "E12345",
       "name": "Anup Kumar",
       "role": "Software Engineer",

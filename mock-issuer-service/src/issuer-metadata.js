@@ -89,7 +89,7 @@ const BASE_CREDENTIAL_CONFIGURATIONS = {
   JwtVerifiableCredential: {
     format: "jwt_vc_json",
     scope: "jwt_vc_json.read",
-    cryptographic_binding_methods_supported: ["did:jwk"],
+    cryptographic_binding_methods_supported: [],
     credential_signing_alg_values_supported: ["ES256"],
     proof_types_supported: {
       jwt: {
